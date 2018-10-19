@@ -138,4 +138,21 @@ class WeichatHelpe
         $str = implode($array);
         return sha1($str);
     }
+
+    //xml解析
+    public function xml_decode(string $xmlString)
+    {
+        $xmlStdclass = simplexml_load_string($xmlString);
+        return get_object_vars($xmlStdclass);
+    }
+
+    //xml生成
+    public function xml_encode(array $xmlArray)
+    {
+        $xmlString = '<xml>';
+        foreach ($xmlArray as $key => $val) {
+            $xmlString .= "<{$key}><![CDATA[{$val}]]</{$key}>";
+        }
+        return $xmlString.'</xml>';
+    }
 }
