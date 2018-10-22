@@ -1,25 +1,31 @@
 <?php
 
-// namespace App\modules;
+namespace App\modules;
 
-class WeichatHelpe
+class WeichatHelper
 {
     //ase秘钥
     public $key;
+    protected $appid;
+    protected $token;
 
-    public function __construct()
+    //传递参数格式可重写
+    public function __construct($config)
     {
         //等号是需要自己拼接上去，不在微信后台登记的秘钥中
-        $this->key = base64_decode('=');
+        $this->key = base64_decode($config['EncodingAESKey'].'=');
+        $this->appid = $config['AppID'];
+        $this->token = $config['Token'];
     }
     /**
      * 对明文进行加密
      * @param string $text 需要加密的明文
      * @return string 加密后的密文
      */
-    public function encrypt($text, $appid)
+    public function encrypt($text)
     {
         try {
+            $appid = $this->appid;
             //获得16位随机字符串，填充到明文之前
             $random = $this->getRandomStr();
             $text = $random . pack("N", strlen($text)) . $text . $appid;
@@ -131,28 +137,63 @@ class WeichatHelpe
     }
 
     //生成数字签名
-    public function signature($token, $timestamp, $nonce, $encrypt_msg)
+    public function signature($encrypt_msg)
     {
+        $timestamp = time();
+        $nonce = rand(1, 10000);
+        $token = $this->token;
         $array = array($encrypt_msg, $token, $timestamp, $nonce);
         sort($array, SORT_STRING);
         $str = implode($array);
-        return sha1($str);
+        return [$timestamp, $nonce, sha1($str)];
     }
 
     //xml解析
-    public function xml_decode(string $xmlString)
+    public function xmlDecode(string $xmlString)
     {
-        $xmlStdclass = simplexml_load_string($xmlString);
-        return get_object_vars($xmlStdclass);
+        $xmlclass = get_object_vars(simplexml_load_string($xmlString));
+        foreach ($xmlclass as $key => $val) {
+            $xmlclass[$key] = (string) $val;
+        }
+        return $xmlclass;
     }
 
     //xml生成
-    public function xml_encode(array $xmlArray)
+    public function xmlEncode(array $xmlArray)
     {
         $xmlString = '<xml>';
         foreach ($xmlArray as $key => $val) {
-            $xmlString .= "<{$key}><![CDATA[{$val}]]</{$key}>";
+            $xmlString .= "<{$key}><![CDATA[{$val}]]></{$key}>";
         }
         return $xmlString.'</xml>';
+    }
+
+    //将微信传送的数据处理成数组
+    public function getMsg(string $postMsg)
+    {
+        //解析微信传的XML
+        $sercetXmlArray = $this->xmlDecode($postMsg);
+        //对密文进行解码
+        $xmlMsg = $this->decrypt($sercetXmlArray['Encrypt']);
+        //对明文进行xml解析
+        return $this->xmlDecode($xmlMsg);
+    }
+
+    //将明文数组转成密文XML
+    public function setSecret(array $msgArray)
+    {
+        //数组转换成XML字符串
+        $msgXmlString = $this->xmlEncode($msgArray);
+        //xml加密成密文
+        $secretMsg = $this->encrypt($msgXmlString);
+        //将密文处理成微信加密模式xml
+        list($timestamp, $nonce, $signation) = $this->signature($secretMsg);
+        $secretXmlArray = [
+            'Encrypt' => $secretMsg,
+            'MsgSignature' => $signation,
+            'TimeStamp' => $timestamp,
+            'Nonce' => $nonce,
+        ];
+        return $this->xmlEncode($secretXmlArray);
     }
 }
