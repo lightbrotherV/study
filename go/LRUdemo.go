@@ -46,24 +46,25 @@ func (list *List) set(key int, value string) {
 		//将节点位置移动到第一位
 		(*list)._moveNodeToFirst(pre)
 	} else {
-		node := Node{key, value, nil}
-		lastTow := (*list).Front
-		lastOne := (*lastTow).Next
+		node := &Node{key, value, nil}
 		//是否是空链
-		if lastOne != nil {
-			//寻找倒数第二个和第一个元素
-			for (*lastOne).Next != nil {
-				lastTow = lastOne
-				lastOne = (*lastOne).Next
-			}
+		if (*((*list).Front)).Next != nil {
+			first := (*list).Front
+			second := (*first).Next
+			(*first).Next = node
+			(*node).Next = second
 			//链表是否已满
 			if (*list).Free == 0 {
-				(*lastTow).Next = &node
-			} else {
-				(*lastOne).Next = &node
+				//寻找倒数第二个和第一个元素
+				last := (*list).Front
+				for (*last).Next != nil {
+					last = (*last).Next
+				}
+				//删除最后一个
+				last = nil
 			}
 		} else {
-			(*lastTow).Next = &node
+			(*((*list).Front)).Next = node
 		}
 	}
 	if (*list).Free != 0 {
@@ -176,6 +177,6 @@ func main() {
 	fmt.Println(list.get(2))
 	fmt.Println(list)
 
-	fmt.Println(list.del(1))
+	fmt.Println(list.del(5))
 	fmt.Println(list)
 }
