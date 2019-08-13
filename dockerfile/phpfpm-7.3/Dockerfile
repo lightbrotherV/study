@@ -18,6 +18,8 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         librdkafka-dev \
         libzip-dev \
+	zip \
+	unzip \
         vim \
         libpng-dev \
         libjpeg-dev \
